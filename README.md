@@ -7,6 +7,13 @@ Assign a Portal ID and a HubSpot Form ID to each of your Gravity Forms, and ever
 
 ---
 
+![ChatGPT-Image-22-апр -2025-г ,-20_45_39](https://github.com/user-attachments/assets/b4ac2856-9857-4c7c-822d-ec0ddbd0b0f0)
+
+---
+![plugin_screen](https://github.com/user-attachments/assets/ea6de9d4-a448-488b-bc59-3e06359a8dbb)
+
+---
+
 ## Features
 
 🔌 **Per‑form configuration**  
