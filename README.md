@@ -29,8 +29,7 @@ Assign a Portal ID and a HubSpot Form ID to each of your Gravity Forms, and ever
 
 ## Installation
 
-1. Clone or download this repository into your  
-   `wp-content/plugins/gravity-forms-hubspot-integration` folder.  
+1. Clone and install as plugin  
 2. Activate **Gravity Forms** (required) and then **Gravity Forms HubSpot Integration**.  
 3. Go to **Forms → HubSpot Integration** in the admin menu.  
 4. For each form, enter your **Portal ID** and **HubSpot Form ID**, then click **Save**.
@@ -41,9 +40,7 @@ Assign a Portal ID and a HubSpot Form ID to each of your Gravity Forms, and ever
 
 1. User submits a Gravity Form on the front‑end.  
 2. The plugin hooks into `gform_after_submission`, builds a JSON payload with `fullname` and `email`, and sends it to:  
-
 https://api.hsforms.com/submissions/v3/integration/submit/{PORTAL_ID}/{HUBSPOT_FORM_ID}
-
 3. Check your HubSpot account — new contacts should appear automatically under the submitted form.
 
 ---
