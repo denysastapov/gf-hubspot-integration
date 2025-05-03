@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
 /**
  * Plugin Name: Gravity Forms HubSpot Integration
  * Plugin URI:  https://github.com/denysastapov
- * Description: Integrates Gravity Forms with HubSpot. Allows you to assign a Portal ID and HubSpot Form ID for each form.
+ * Description: Integrates Gravity Forms with HubSpot. Allows assignment of Portal ID and HubSpot Form ID per form.
  * Version:     1.2
  * Author:      Denys Astapov
  * Author URI:  https://github.com/denysastapov
@@ -14,26 +15,42 @@ if (! defined('ABSPATH')) {
   exit;
 }
 
-include_once(plugin_dir_path(__FILE__) . 'gf-hubspot-integration-test.php');
+// Ensure core plugin functions are available for static analysis
+if (! function_exists('plugin_dir_path')) {
+  require_once ABSPATH . WPINC . '/plugin.php';
+}
+
+if (! defined('GFHS_PLUGIN_URL')) {
+  // Explicit global namespace
+  define('GFHS_PLUGIN_URL', plugin_dir_url(__FILE__));
+}
+
+// Include test file if present
+include_once plugin_dir_path(__FILE__) . 'gf-hubspot-integration-test.php';
 
 class GF_HubSpot_Integration_Plugin
 {
-  private $option_name = 'gf_hubspot_integrations';
+  /**
+   * Option name for integrations
+   *
+   * @var string
+   */
+  private string $option_name = 'gf_hubspot_integrations';
 
   public function __construct()
   {
-    add_action('gform_loaded', array($this, 'init_plugin'));
+    add_action('gform_loaded', [$this, 'init_plugin']);
   }
 
-  public function init_plugin()
+  public function init_plugin(): void
   {
-    add_action('admin_menu', array($this, 'add_admin_menu'), 20);
-    add_action('admin_init', array($this, 'register_settings'));
-    add_action('gform_after_submission', array($this, 'handle_form_submission'), 10, 2);
-    add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+    add_action('admin_menu', [$this, 'add_admin_menu'], 20);
+    add_action('admin_init', [$this, 'register_settings']);
+    add_action('gform_after_submission', [$this, 'handle_form_submission'], 10, 2);
+    add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
   }
 
-  public function add_admin_menu()
+  public function add_admin_menu(): void
   {
     add_submenu_page(
       'gf_edit_forms',
@@ -41,27 +58,28 @@ class GF_HubSpot_Integration_Plugin
       'HubSpot Integration',
       'manage_options',
       'gf-hubspot-integration',
-      array($this, 'render_settings_page')
+      [$this, 'render_settings_page']
     );
   }
 
-  public function register_settings()
+  public function register_settings(): void
   {
     register_setting('gf_hubspot_integration_group', $this->option_name);
   }
 
-  public function render_settings_page()
+  public function render_settings_page(): void
   {
     if (! class_exists('GFAPI')) {
       echo '<div class="notice notice-error"><p>Gravity Forms is not installed or activated.</p></div>';
       return;
     }
-    $integrations = get_option($this->option_name, array());
-    $forms = GFAPI::get_forms();
+
+    $integrations = (array) get_option($this->option_name, []);
+    $forms        = GFAPI::get_forms();
 ?>
     <div class="wrap">
       <h1>Gravity Forms HubSpot Integration Settings</h1>
-      <p>Specify the Portal ID and HubSpot Form ID for each form to enable integration with HubSpot.</p>
+      <p>Specify the Portal ID and HubSpot Form ID for each form.</p>
       <form method="post" action="options.php">
         <?php settings_fields('gf_hubspot_integration_group'); ?>
         <table class="wp-list-table widefat fixed striped">
@@ -76,18 +94,18 @@ class GF_HubSpot_Integration_Plugin
           <tbody>
             <?php if (! empty($forms)) : ?>
               <?php foreach ($forms as $form) :
-                $form_id = $form['id'];
-                $portalID = isset($integrations[$form_id]['portalID']) ? esc_attr($integrations[$form_id]['portalID']) : '';
-                $hubspotFormId = isset($integrations[$form_id]['hubspotFormId']) ? esc_attr($integrations[$form_id]['hubspotFormId']) : '';
+                $form_id       = (string) $form['id'];
+                $portalID      = esc_attr($integrations[$form_id]['portalID'] ?? '');
+                $hubspotFormId = esc_attr($integrations[$form_id]['hubspotFormId'] ?? '');
               ?>
                 <tr>
                   <td><?php echo esc_html($form_id); ?></td>
                   <td><?php echo esc_html($form['title']); ?></td>
                   <td>
-                    <input type="text" name="<?php echo $this->option_name; ?>[<?php echo $form_id; ?>][portalID]" value="<?php echo $portalID; ?>" />
+                    <input type="text" name="<?php echo esc_attr($this->option_name); ?>[<?php echo esc_attr($form_id); ?>][portalID]" value="<?php echo $portalID; ?>" />
                   </td>
                   <td>
-                    <input type="text" name="<?php echo $this->option_name; ?>[<?php echo $form_id; ?>][hubspotFormId]" value="<?php echo $hubspotFormId; ?>" />
+                    <input type="text" name="<?php echo esc_attr($this->option_name); ?>[<?php echo esc_attr($form_id); ?>][hubspotFormId]" value="<?php echo $hubspotFormId; ?>" />
                   </td>
                 </tr>
               <?php endforeach; ?>
@@ -100,68 +118,72 @@ class GF_HubSpot_Integration_Plugin
         </table>
         <?php submit_button(); ?>
       </form>
-      <!-- <?php
-            gf_hubspot_render_test_section($forms);
-            ?> -->
     </div>
 <?php
   }
 
-  public function handle_form_submission($entry, $form)
+  public function handle_form_submission(array $entry, array $form): void
   {
-    $integrations = get_option($this->option_name, array());
-    $form_id = (string)$form['id'];
+    $integrations = (array) get_option($this->option_name, []);
+    $form_id      = (string) $form['id'];
 
     if (empty($integrations[$form_id])) {
       return;
     }
 
-    $portalID = isset($integrations[$form_id]['portalID']) ? $integrations[$form_id]['portalID'] : '';
-    $hubspotFormId = isset($integrations[$form_id]['hubspotFormId']) ? $integrations[$form_id]['hubspotFormId'] : '';
+    $portalID      = $integrations[$form_id]['portalID'] ?? '';
+    $hubspotFormId = $integrations[$form_id]['hubspotFormId'] ?? '';
 
-    $email_field_id = '';
+    // Extract email and fullname fields by adminLabel
+    $email_field_id    = '';
     $fullname_field_id = '';
     foreach ($form['fields'] as $field) {
       if (! empty($field->adminLabel)) {
-        $adminLabel = strtolower(trim($field->adminLabel));
-        if ($adminLabel === 'email') {
-          $email_field_id = (string)$field->id;
+        $label = strtolower(trim((string) $field->adminLabel));
+        if ($label === 'email') {
+          $email_field_id = (string) $field->id;
         }
-        if ($adminLabel === 'fullname') {
-          $fullname_field_id = (string)$field->id;
+        if ($label === 'fullname') {
+          $fullname_field_id = (string) $field->id;
         }
       }
     }
-    $email = $email_field_id ? rgar($entry, $email_field_id) : '';
+    $email    = $email_field_id ? rgar($entry, $email_field_id) : '';
     $fullname = $fullname_field_id ? rgar($entry, $fullname_field_id) : '';
 
-    $payload = array(
-      'fields' => array(
-        array('name' => 'fullname', 'value' => $fullname),
-        array('name' => 'email', 'value' => $email)
-      ),
-      'context' => array(
-        'pageUri'  => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '',
-        'pageName' => function_exists('get_the_title') ? get_the_title() : ''
-      )
-    );
-    $args = array(
-      'headers' => array('Content-Type' => 'application/json'),
-      'body'    => json_encode($payload),
+    $payload = [
+      'fields'  => [
+        ['name' => 'fullname', 'value' => $fullname],
+        ['name' => 'email',    'value' => $email],
+      ],
+      'context' => [
+        'pageUri'  => wp_unslash($_SERVER['HTTP_REFERER'] ?? ''),
+        'pageName' => function_exists('get_the_title') ? get_the_title() : '',
+      ],
+    ];
+
+    $args = [
+      'headers' => ['Content-Type' => 'application/json'],
+      'body'    => wp_json_encode($payload),
       'timeout' => 30,
+    ];
+
+    $url = sprintf(
+      'https://api.hsforms.com/submissions/v3/integration/submit/%s/%s',
+      rawurlencode($portalID),
+      rawurlencode($hubspotFormId)
     );
-    $url = "https://api.hsforms.com/submissions/v3/integration/submit/{$portalID}/{$hubspotFormId}";
+
     wp_remote_post($url, $args);
   }
 
-  public function enqueue_admin_scripts($hook)
+  public function enqueue_admin_scripts(string $hook): void
   {
-    // if ($hook != 'gravityforms_page_gf-hubspot-integration') {
-    //   return;
+    // Only enqueue on our settings page if needed
+    // if ($hook !== 'gravityforms_page_gf-hubspot-integration') {
+    //     return;
     // }
     wp_enqueue_script('jquery');
-    // gf_hubspot_enqueue_test_scripts();
-    // error_log("Test scripts enqueued.");
   }
 }
 
