@@ -12,26 +12,31 @@ declare(strict_types=1);
  */
 
 if (! defined('ABSPATH')) {
-  exit;
+  /**
+   * Full path to the WordPress directory.
+   * @var string
+   */
+  define('ABSPATH', dirname(__FILE__, 2) . '/');
 }
 
-// Ensure core plugin functions are available for static analysis
-if (! function_exists('plugin_dir_path')) {
-  require_once ABSPATH . WPINC . '/plugin.php';
+if (! defined('WPINC')) {
+  /**
+   * WordPress directory name for includes.
+   * @var string
+   */
+  define('WPINC', 'wp-includes');
 }
 
 if (! defined('GFHS_PLUGIN_URL')) {
-  // Explicit global namespace
   define('GFHS_PLUGIN_URL', plugin_dir_url(__FILE__));
 }
 
-// Include test file if present
 include_once plugin_dir_path(__FILE__) . 'gf-hubspot-integration-test.php';
 
 class GF_HubSpot_Integration_Plugin
 {
   /**
-   * Option name for integrations
+   * Option name for integrations.
    *
    * @var string
    */
@@ -134,12 +139,11 @@ class GF_HubSpot_Integration_Plugin
     $portalID      = $integrations[$form_id]['portalID'] ?? '';
     $hubspotFormId = $integrations[$form_id]['hubspotFormId'] ?? '';
 
-    // Extract email and fullname fields by adminLabel
     $email_field_id    = '';
     $fullname_field_id = '';
     foreach ($form['fields'] as $field) {
       if (! empty($field->adminLabel)) {
-        $label = strtolower(trim((string) $field->adminLabel));
+        $label = strtolower(trim((string)$field->adminLabel));
         if ($label === 'email') {
           $email_field_id = (string) $field->id;
         }
@@ -179,10 +183,6 @@ class GF_HubSpot_Integration_Plugin
 
   public function enqueue_admin_scripts(string $hook): void
   {
-    // Only enqueue on our settings page if needed
-    // if ($hook !== 'gravityforms_page_gf-hubspot-integration') {
-    //     return;
-    // }
     wp_enqueue_script('jquery');
   }
 }
